@@ -2,22 +2,52 @@ const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema({
 
-  name: String,
-  email: String,
-  phone: String,
-  room: String,
-  checkIn: String,
-  checkOut: String,
-  guests: Number,
-  specialRequest: String,
+  roomName: {
+    type: String,
+    required: true
+  },
 
-  // ✅ NEW FIELD
+  name: {
+    type: String,
+    required: true
+  },
+
+  email: {
+    type: String,
+    required: true
+  },
+
+  phone: {
+    type: String,
+    required: true
+  },
+
+  guests: {
+    type: Number,
+    required: true
+  },
+
+  checkIn: {
+    type: Date,
+    required: true
+  },
+
+  checkOut: {
+    type: Date,
+    required: true
+  },
+
+  paymentId: String,
+
+  orderId: String,
+
   status: {
     type: String,
-    enum: ["Pending", "Accepted", "Rejected"],
     default: "Pending"
   }
 
 }, { timestamps: true });
 
-module.exports = mongoose.model("Booking", bookingSchema);
+module.exports =
+  mongoose.models.Booking ||
+  mongoose.model("Booking", bookingSchema);

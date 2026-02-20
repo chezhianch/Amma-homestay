@@ -1,13 +1,20 @@
-import { useState } from "react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { X } from "lucide-react";
-import { createBooking } from "@/api/bookingApi";
+import { useState, useEffect } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import axios from "axios";
+import { getRoomAvailability } from "@/api/bookingApi";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 interface Room {
-  id: number;
+  _id: string;
   name: string;
-  price: number;
-  bed: string;
-  guests: number;
 }
 
 interface Props {
@@ -17,323 +24,338 @@ interface Props {
 
 export default function BookingModal({ room, onClose }: Props) {
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    checkIn: "",
-    checkOut: "",
-    guests: "1",
-    requests: "",
-  });
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [guests, setGuests] = useState(1);
 
-  const [submitted, setSubmitted] = useState(false);
+  const [checkIn, setCheckIn] = useState<Date | null>(null);
+  const [checkOut, setCheckOut] = useState<Date | null>(null);
+
+  const [bookedDates, setBookedDates] = useState<Date[]>([]);
+
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // calculate nights
-  const nights =
-    form.checkIn && form.checkOut
-      ? Math.max(
-          0,
-          Math.ceil(
-            (new Date(form.checkOut).getTime() -
-              new Date(form.checkIn).getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
-        )
-      : 0;
 
-  // SUBMIT BOOKING
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ===============================
+  // Animation Variants
+  // ===============================
+  const backdrop: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 }
+  };
 
-    e.preventDefault();
-
-    if (!form.name || !form.email || !form.phone || !form.checkIn || !form.checkOut) {
-      alert("Please fill all required fields");
-      return;
+  const modal: Variants = {
+    hidden: { opacity: 0, y: 40, scale: 0.96 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.35 }
     }
-
-    setLoading(true);
-
-    const bookingData = {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      checkIn: form.checkIn,
-      checkOut: form.checkOut,
-      guests: Number(form.guests),
-      room: room.name,
-      specialRequest: form.requests,
-    };
-
-    try {
-
-      const result = await createBooking(bookingData);
-
-      if (result.success) {
-
-        setSubmitted(true);
-
-        // reset form
-        setForm({
-          name: "",
-          email: "",
-          phone: "",
-          checkIn: "",
-          checkOut: "",
-          guests: "1",
-          requests: "",
-        });
-
-      } else {
-
-        alert("Booking failed");
-
-      }
-
-    } catch (error) {
-
-      console.error(error);
-      alert("Server error");
-
-    }
-
-    setLoading(false);
   };
 
 
+  // ===============================
+  // Fetch availability (UNCHANGED)
+  // ===============================
+  useEffect(() => {
+
+    const fetchAvailability = async () => {
+
+      const result = await getRoomAvailability(room.name);
+
+      if (result.success) {
+
+        const disabled: Date[] = [];
+
+        result.bookings.forEach((b: any) => {
+
+          const start = new Date(b.checkIn);
+          const end = new Date(b.checkOut);
+
+          const current = new Date(start);
+
+          while (current < end) {
+
+            disabled.push(
+              new Date(
+                current.getFullYear(),
+                current.getMonth(),
+                current.getDate()
+              )
+            );
+
+            current.setDate(current.getDate() + 1);
+
+          }
+
+        });
+
+        setBookedDates(disabled);
+
+      }
+
+    };
+
+    fetchAvailability();
+
+  }, [room.name]);
+
+
+  // ===============================
+  // Load Razorpay Script
+  // ===============================
+  const loadRazorpay = () => {
+
+    return new Promise<boolean>((resolve) => {
+
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement("script");
+
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+
+      script.onload = () => resolve(true);
+
+      script.onerror = () => resolve(false);
+
+      document.body.appendChild(script);
+
+    });
+
+  };
+
+
+  // ===============================
+  // Handle booking with Razorpay
+  // ===============================
+  const handleBooking = async () => {
+
+    if (!name || !email || !phone || !checkIn || !checkOut) {
+  
+      setError(true);
+      setMessage("Please fill all required fields");
+      return;
+  
+    }
+  
+    if (checkOut <= checkIn) {
+  
+      setError(true);
+      setMessage("Check-out must be after check-in");
+      return;
+  
+    }
+  
+    try {
+  
+      setLoading(true);
+  
+      const razorpayLoaded = await loadRazorpay();
+  
+      if (!razorpayLoaded) {
+  
+        setError(true);
+        setMessage("Payment system failed to load");
+        setLoading(false);
+        return;
+  
+      }
+  
+  
+      // ✅ Correct TypeScript destructuring
+      const { data } = await axios.post(
+        "http://localhost:5000/api/payment/create-order",
+        {
+          roomName: room.name,
+          name,
+          email,
+          phone,
+          guests,
+          checkIn,
+          checkOut
+        }
+      );
+  
+      if (!data.success) {
+  
+        setError(true);
+        setMessage(data.message);
+        setLoading(false);
+        return;
+  
+      }
+  
+  
+      const options = {
+  
+        key: data.key,
+  
+        order_id: data.order.id,
+  
+        name: "Amma Homestay",
+  
+        description: room.name,
+  
+        theme: { color: "#000000" },
+  
+        handler: async function (response: any) {
+  
+          await axios.post(
+            "http://localhost:5000/api/payment/verify-payment",
+            {
+              ...response,
+              bookingId: data.bookingId
+            }
+          );
+  
+          setError(false);
+          setMessage("Booking Confirmed Successfully ✅");
+  
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+  
+        },
+  
+        modal: {
+          ondismiss: () => setLoading(false)
+        }
+  
+      };
+  
+  
+      const rzp = new window.Razorpay(options);
+  
+      rzp.open();
+  
+      setLoading(false);
+  
+    }
+    catch (err: any) {
+  
+      setError(true);
+  
+      setMessage(
+        err.response?.data?.message || "Payment failed"
+      );
+  
+      setLoading(false);
+  
+    }
+  
+  };
+
+
+  // ===============================
+  // UI (UNCHANGED ORIGINAL)
+  // ===============================
   return (
 
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <AnimatePresence>
 
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+      <motion.div
+        variants={backdrop}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+      >
 
-        {/* HEADER */}
-
-        <div className="bg-black text-white px-6 py-5 flex justify-between items-center">
-
-          <div>
-
-            <h3 className="text-xl font-semibold font-display">
-              Book Your Stay
-            </h3>
-
-            <p className="text-sm text-white/70">
-              {room.name}
-            </p>
-
-          </div>
+        <motion.div
+          variants={modal}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-neutral-200 p-7"
+        >
 
           <button
             onClick={onClose}
-            className="opacity-70 hover:opacity-100 transition"
+            className="absolute right-4 top-4 text-neutral-500 hover:text-black"
           >
-            <X size={20} />
+            <X size={22} />
           </button>
 
-        </div>
+          <h2 className="text-2xl font-semibold mb-6">
+            Book {room.name}
+          </h2>
 
+          <div className="space-y-4">
 
-        {/* SUCCESS SCREEN */}
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Full Name"
+              className="w-full border px-3 py-2 rounded"
+            />
 
-        {submitted ? (
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full border px-3 py-2 rounded"
+            />
 
-          <div className="p-10 text-center">
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone"
+              className="w-full border px-3 py-2 rounded"
+            />
 
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#E6C97A]/20 flex items-center justify-center">
+            <input
+              type="number"
+              value={guests}
+              onChange={(e) => setGuests(Number(e.target.value))}
+              className="w-full border px-3 py-2 rounded"
+            />
 
-              <span className="text-[#C6A75E] text-3xl">
-                ✓
-              </span>
+            <DatePicker
+              selected={checkIn}
+              onChange={(date) => setCheckIn(date)}
+              excludeDates={bookedDates}
+              minDate={new Date()}
+              placeholderText="Check-In"
+              className="w-full border px-3 py-2 rounded"
+            />
 
-            </div>
+            <DatePicker
+              selected={checkOut}
+              onChange={(date) => setCheckOut(date)}
+              excludeDates={bookedDates}
+              minDate={checkIn || new Date()}
+              placeholderText="Check-Out"
+              className="w-full border px-3 py-2 rounded"
+            />
 
-            <h4 className="text-2xl font-semibold mb-2">
-              Booking Confirmed
-            </h4>
-
-            <p className="text-gray-600 mb-6">
-              Thank you <strong>{form.name}</strong>  
-              <br />
-              We will contact you soon.
-            </p>
+            {message && (
+              <p className={error ? "text-red-500" : "text-green-600"}>
+                {message}
+              </p>
+            )}
 
             <button
-              onClick={onClose}
-              className="
-                bg-gradient-to-r
-                from-[#E6C97A]
-                via-[#C6A75E]
-                to-[#A8893E]
-                text-black
-                px-6
-                py-3
-                rounded-lg
-                font-semibold
-                hover:scale-105
-                transition
-              "
+              onClick={handleBooking}
+              disabled={loading}
+              className="w-full bg-black text-white py-3 rounded"
             >
-              Close
+              {loading ? "Processing..." : "Confirm Booking"}
             </button>
 
           </div>
 
-        ) : (
+        </motion.div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+      </motion.div>
 
-
-            {/* PRICE */}
-
-            <div className="bg-gray-100 rounded-lg p-4 flex justify-between">
-
-              <div>
-
-                <p className="text-sm text-gray-500">
-                  Rate per night
-                </p>
-
-                <p className="text-xl font-bold text-[#C6A75E]">
-                  ₹{room.price}
-                </p>
-
-              </div>
-
-              {nights > 0 && (
-
-                <div className="text-right">
-
-                  <p className="text-sm text-gray-500">
-                    {nights} nights
-                  </p>
-
-                  <p className="font-bold">
-                    ₹{room.price * nights}
-                  </p>
-
-                </div>
-
-              )}
-
-            </div>
-
-
-            {/* INPUTS */}
-
-            <input
-              required
-              type="text"
-              placeholder="Full Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#C6A75E]"
-            />
-
-            <input
-              required
-              type="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#C6A75E]"
-            />
-
-            <input
-              required
-              type="tel"
-              placeholder="Phone"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#C6A75E]"
-            />
-
-            <input
-              required
-              type="date"
-              value={form.checkIn}
-              onChange={(e) => setForm({ ...form, checkIn: e.target.value })}
-              className="w-full border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#C6A75E]"
-            />
-
-            <input
-              required
-              type="date"
-              value={form.checkOut}
-              onChange={(e) => setForm({ ...form, checkOut: e.target.value })}
-              className="w-full border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#C6A75E]"
-            />
-
-            <select
-              value={form.guests}
-              onChange={(e) => setForm({ ...form, guests: e.target.value })}
-              className="w-full border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#C6A75E]"
-            >
-              {Array.from({ length: room.guests }, (_, i) => i + 1).map(n => (
-                <option key={n} value={String(n)}>
-                  {n} Guest
-                </option>
-              ))}
-            </select>
-
-            <textarea
-              placeholder="Special Request"
-              value={form.requests}
-              onChange={(e) => setForm({ ...form, requests: e.target.value })}
-              className="w-full border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-[#C6A75E]"
-            />
-
-
-            {/* PREMIUM BUTTON */}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="
-                w-full
-                relative
-                overflow-hidden
-                bg-gradient-to-r
-                from-[#E6C97A]
-                via-[#C6A75E]
-                to-[#A8893E]
-                text-black
-                font-semibold
-                py-3.5
-                rounded-lg
-                transition-all
-                duration-300
-                hover:scale-[1.02]
-                hover:shadow-[0_12px_35px_rgba(198,167,94,0.45)]
-                disabled:opacity-60
-              "
-            >
-
-              {loading ? (
-
-                <span className="flex justify-center items-center gap-2">
-
-                  <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
-
-                  Processing...
-
-                </span>
-
-              ) : (
-
-                "Confirm Booking"
-
-              )}
-
-            </button>
-
-          </form>
-
-        )}
-
-      </div>
-
-    </div>
+    </AnimatePresence>
 
   );
 

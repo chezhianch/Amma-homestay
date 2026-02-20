@@ -2,54 +2,46 @@ const express = require("express");
 const router = express.Router();
 
 const Booking = require("../models/Booking");
+const Room = require("../models/Room");
 
 
-// CREATE BOOKING (PUBLIC)
-router.post("/", async (req, res) => {
+// ==============================
+// GET ROOM AVAILABILITY
+// ==============================
 
-  try {
-
-    const booking = new Booking(req.body);
-
-    await booking.save();
-
-    res.json({
-      success: true,
-      message: "Booking successful"
-    });
-
-  } catch (error) {
-
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
-
-  }
-
-});
-
-
-// ADMIN GET BOOKINGS (protected)
-const adminAuth = require("../middleware/authMiddleware");
-
-router.get("/", adminAuth, async (req, res) => {
+router.get("/availability/:roomName", async (req, res) => {
 
   try {
 
-    const bookings = await Booking.find();
+    const room = await Room.findOne({
+      name: req.params.roomName
+    });
 
-    res.json({
+    if (!room) {
+      return res.status(200).json({
+        success: true,
+        bookings: []
+      });
+    }
+
+    const bookings = await Booking.find({
+      room: room._id,
+      status: "confirmed"
+    });
+
+    res.status(200).json({
       success: true,
       bookings
     });
 
-  } catch (error) {
+  }
+  catch (err) {
+
+    console.log("Availability error:", err);
 
     res.status(500).json({
-      success: false
+      success: false,
+      bookings: []
     });
 
   }

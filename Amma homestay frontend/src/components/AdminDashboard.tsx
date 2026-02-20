@@ -8,12 +8,12 @@ interface Booking {
   name: string;
   email: string;
   phone: string;
-  room: string;
+  roomName: string;
   checkIn: string;
   checkOut: string;
   guests: number;
-  createdAt: string;
-  status: "Pending" | "Accepted" | "Rejected";
+  status: string;
+  paymentId?: string;
 }
 
 export default function AdminDashboard() {
@@ -22,14 +22,36 @@ export default function AdminDashboard() {
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
 
   const token = localStorage.getItem("adminToken");
 
 
   // ================= FETCH BOOKINGS =================
+
+  const fetchBookings = async () => {
+
+    try {
+
+      const result = await getBookings();
+
+      if (result.success) {
+        setBookings(result.bookings);
+      }
+
+    }
+    catch (err) {
+      console.error(err);
+    }
+    finally {
+      setLoading(false);
+    }
+
+  };
+
+
+  // ================= INITIAL LOAD =================
+
   useEffect(() => {
 
     if (!token) {
@@ -42,120 +64,77 @@ export default function AdminDashboard() {
   }, []);
 
 
+  // ================= AUTO REFRESH =================
 
-  const fetchBookings = async () => {
+  useEffect(() => {
+
+    const interval = setInterval(() => {
+      fetchBookings();
+    }, 10000);
+
+    return () => clearInterval(interval);
+
+  }, []);
+
+
+  // ================= DELETE =================
+
+  const deleteBooking = async (id: string) => {
 
     try {
 
-      const result = await getBookings();
+      await fetch(
+        `http://localhost:5000/api/admin/bookings/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-      if (result.success) {
-        setBookings(result.bookings);
-      }
+      fetchBookings();
 
-    } catch (err) {
-
+    }
+    catch (err) {
       console.error(err);
-
-    } finally {
-
-      setLoading(false);
-
     }
 
   };
 
 
-
-  // ================= ACTIONS =================
-
-  const acceptBooking = async (id: string) => {
-
-    await fetch(`http://localhost:5000/api/admin/bookings/${id}/accept`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    fetchBookings();
-
-  };
-
-
-  const rejectBooking = async (id: string) => {
-
-    await fetch(`http://localhost:5000/api/admin/bookings/${id}/reject`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    fetchBookings();
-
-  };
-
-
-  const deleteBooking = async (id: string) => {
-
-    await fetch(`http://localhost:5000/api/admin/bookings/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    fetchBookings();
-
-  };
-
+  // ================= LOGOUT =================
 
   const handleLogout = () => {
 
     localStorage.removeItem("adminToken");
+
     navigate("/admin");
 
   };
 
 
+  // ================= MANAGEMENT PANEL =================
 
-  // ================= STATS =================
+  const openManagementPanel = () => {
 
-  const stats = useMemo(() => {
+    navigate("/admin/management");
 
-    return {
-      total: bookings.length,
-      pending: bookings.filter(b => b.status === "Pending").length,
-      accepted: bookings.filter(b => b.status === "Accepted").length,
-      rejected: bookings.filter(b => b.status === "Rejected").length
-    };
-
-  }, [bookings]);
+  };
 
 
-
-  // ================= SEARCH + FILTER =================
+  // ================= SEARCH =================
 
   const filteredBookings = useMemo(() => {
 
-    return bookings.filter(b => {
+    return bookings.filter(b =>
+      b.name.toLowerCase().includes(search.toLowerCase()) ||
+      b.email.toLowerCase().includes(search.toLowerCase()) ||
+      b.phone.includes(search) ||
+      b.roomName.toLowerCase().includes(search.toLowerCase())
+    );
 
-      const matchesSearch =
-        b.name.toLowerCase().includes(search.toLowerCase()) ||
-        b.email.toLowerCase().includes(search.toLowerCase()) ||
-        b.phone.includes(search) ||
-        b.room.toLowerCase().includes(search.toLowerCase());
-
-      const matchesFilter =
-        filter === "All" || b.status === filter;
-
-      return matchesSearch && matchesFilter;
-
-    });
-
-  }, [bookings, search, filter]);
-
+  }, [bookings, search]);
 
 
   // ================= LOADING =================
@@ -171,7 +150,6 @@ export default function AdminDashboard() {
   }
 
 
-
   // ================= UI =================
 
   return (
@@ -180,240 +158,187 @@ export default function AdminDashboard() {
 
 
       {/* HEADER */}
+
       <div className="relative pt-6 pb-12 text-center">
 
-
-        {/* HOME ICON */}
         <div
           onClick={() => navigate("/")}
-          className="
-            absolute left-16 top-12
-            cursor-pointer
-            text-[#E6C97A]
-            hover:text-white
-            transition
-          "
-          title="Go to Home"
+          className="absolute left-16 top-12 cursor-pointer text-[#E6C97A] hover:text-white transition"
         >
-          <Home size={40} strokeWidth={2} />
+          <Home size={40} />
         </div>
 
 
-
-        {/* TITLE */}
-        <h1 className="font-display font-bold text-4xl tracking-wide bg-gradient-to-r from-[#E6C97A] via-[#C6A75E] to-[#A8893E] bg-clip-text text-transparent">
-          Admin
+        <h1 className="font-bold text-4xl text-[#E6C97A]">
+          Admin Dashboard
         </h1>
 
-        <span className="text-[#E6C97A] text-[12px] tracking-[0.25em] uppercase opacity-90">
-          DASHBOARD
-        </span>
 
+        <div className="absolute right-8 top-6 flex gap-3">
 
+          <button
+            onClick={openManagementPanel}
+            className="border border-[#E6C97A] text-[#E6C97A] px-5 py-2 rounded hover:bg-[#E6C97A] hover:text-black transition"
+          >
+            Management Panel
+          </button>
 
-        {/* LOGOUT */}
-        <div className="absolute right-8 top-6">
 
           <button
             onClick={handleLogout}
-            className="
-              border border-[#E6C97A]
-              text-[#E6C97A]
-              px-5 py-2
-              rounded
-              hover:bg-[#E6C97A]
-              hover:text-black
-              transition
-            "
+            className="border border-red-500 text-red-500 px-5 py-2 rounded hover:bg-red-500 hover:text-white transition"
           >
             Logout
           </button>
 
         </div>
 
-
       </div>
 
 
 
-      {/* STATS */}
-      <div className="px-16 mb-8 grid grid-cols-4 gap-6">
+      {/* SEARCH */}
 
-        <StatCard title="Total Bookings" value={stats.total} color="gold" />
-
-        <StatCard title="Pending" value={stats.pending} color="yellow" />
-
-        <StatCard title="Accepted" value={stats.accepted} color="green" />
-
-        <StatCard title="Rejected" value={stats.rejected} color="red" />
-
-      </div>
-
-
-
-      {/* SEARCH + FILTER */}
-      <div className="px-16 mb-6 flex justify-between">
+      <div className="px-16 mb-6">
 
         <input
           type="text"
-          placeholder="Search by name, email, phone, room..."
+          placeholder="Search guest, email, phone, room..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="
-            bg-[#111]
-            border border-[#E6C97A]/30
-            px-4 py-2
-            rounded
-            text-white
-            w-96
-            focus:outline-none
-            focus:border-[#E6C97A]
-          "
+          className="bg-[#111] border border-[#E6C97A]/30 px-4 py-2 rounded w-96 text-white focus:outline-none focus:border-[#E6C97A]"
         />
 
-
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="
-            bg-[#111]
-            border border-[#E6C97A]/30
-            px-4 py-2
-            rounded
-            text-white
-          "
-        >
-          <option value="All">All</option>
-          <option value="Pending">Pending</option>
-          <option value="Accepted">Accepted</option>
-          <option value="Rejected">Rejected</option>
-        </select>
-
       </div>
 
 
 
-      {/* TABLE */}
       <div className="px-16 pb-16">
 
-        <div className="border border-[#E6C97A]/20 rounded-xl overflow-hidden">
+<div className="border border-[#E6C97A]/20 rounded-2xl overflow-hidden shadow-lg">
 
-          <table className="w-full text-sm">
+  <table className="w-full">
 
-            <thead className="bg-[#111] text-[#E6C97A] uppercase">
+    <thead className="bg-[#111] text-[#E6C97A] uppercase text-sm">
+      <tr>
 
-              <tr>
+        <th className="py-4 px-6 text-center">No</th>
 
-                <th className="py-4 px-6 text-center">No.</th>
-                <th className="py-4 px-6 text-left">Name</th>
-                <th className="py-4 px-6 text-left">Email</th>
-                <th className="py-4 px-6 text-left">Phone</th>
-                <th className="py-4 px-6 text-left">Room</th>
-                <th className="py-4 px-6 text-left">Check In</th>
-                <th className="py-4 px-6 text-left">Check Out</th>
-                <th className="py-4 px-6 text-center">Guests</th>
-                <th className="py-4 px-6 text-center">Status</th>
-                <th className="py-4 px-6 text-center">Actions</th>
+        <th className="py-4 px-6 text-left">Name</th>
 
-              </tr>
+        <th className="py-4 px-6 text-left">Email</th>
 
-            </thead>
+        <th className="py-4 px-6 text-left">Phone</th>
 
+        <th className="py-4 px-6 text-left">Room</th>
 
-            <tbody>
+        <th className="py-4 px-6 text-center">Guests</th>
 
-              {filteredBookings.map((b, index) => (
+        <th className="py-4 px-6 text-center">Status</th>
 
-                <tr key={b._id} className="border-t border-[#E6C97A]/10 hover:bg-[#E6C97A]/5">
+        <th className="py-4 px-6 text-center">Payment ID</th>
 
-                  <td className="py-4 px-6 text-center text-[#E6C97A] font-semibold">
-                    {index + 1}
-                  </td>
+        <th className="py-4 px-6 text-center">Action</th>
 
-                  <td className="py-4 px-6">{b.name}</td>
-
-                  <td className="py-4 px-6">{b.email}</td>
-
-                  <td className="py-4 px-6">{b.phone}</td>
-
-                  <td className="py-4 px-6">{b.room}</td>
-
-                  <td className="py-4 px-6">
-                    {new Date(b.checkIn).toLocaleDateString()}
-                  </td>
-
-                  <td className="py-4 px-6">
-                    {new Date(b.checkOut).toLocaleDateString()}
-                  </td>
-
-                  <td className="py-4 px-6 text-center">{b.guests}</td>
-
-                  <td className="py-4 px-6 text-center">{b.status}</td>
-
-                  <td className="py-4 px-6 text-center space-x-2">
-
-                    {b.status !== "Accepted" &&
-                      <button onClick={() => acceptBooking(b._id)} className="bg-green-500 px-3 py-1 rounded text-xs">
-                        Accept
-                      </button>
-                    }
-
-                    {b.status !== "Rejected" &&
-                      <button onClick={() => rejectBooking(b._id)} className="bg-yellow-500 px-3 py-1 rounded text-xs text-black">
-                        Reject
-                      </button>
-                    }
-
-                    <button onClick={() => deleteBooking(b._id)} className="bg-red-500 px-3 py-1 rounded text-xs">
-                      Delete
-                    </button>
-
-                  </td>
-
-                </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
+      </tr>
+    </thead>
 
 
-    </div>
+    <tbody>
 
-  );
+      {filteredBookings.map((b, index) => {
 
-}
+        let statusStyle = "bg-gray-500/20 text-gray-400";
+
+        if (b.status === "Paid")
+          statusStyle = "bg-green-500/20 text-green-400";
+
+        if (b.status === "Pending")
+          statusStyle = "bg-yellow-500/20 text-yellow-400";
+
+        if (b.status === "Rejected")
+          statusStyle = "bg-red-500/20 text-red-400";
 
 
+        return (
 
-// ================= STAT CARD =================
+          <tr
+            key={b._id}
+            className="border-t border-[#E6C97A]/10 hover:bg-[#E6C97A]/5 transition"
+          >
 
-function StatCard({ title, value, color }: any) {
+            <td className="py-4 px-6 text-center text-[#E6C97A]">
+              {index + 1}
+            </td>
 
-  const colors: any = {
-    gold: "text-[#E6C97A]",
-    yellow: "text-yellow-400",
-    green: "text-green-400",
-    red: "text-red-400"
-  };
 
-  return (
+            <td className="py-4 px-6">
+              {b.name}
+            </td>
 
-    <div className="bg-[#111] border border-[#E6C97A]/20 rounded-lg p-5">
 
-      <div className="text-gray-400 text-sm">
-        {title}
-      </div>
+            <td className="py-4 px-6 text-gray-300">
+              {b.email}
+            </td>
 
-      <div className={`text-3xl font-bold mt-2 ${colors[color]}`}>
-        {value}
-      </div>
 
+            <td className="py-4 px-6">
+              {b.phone}
+            </td>
+
+
+            <td className="py-4 px-6">
+
+              <span className="border border-[#E6C97A]/30 px-2 py-1 rounded text-xs text-[#E6C97A]">
+                {b.roomName}
+              </span>
+
+            </td>
+
+
+            <td className="py-4 px-6 text-center">
+              {b.guests}
+            </td>
+
+
+            <td className="py-4 px-6 text-center">
+
+              <span className={`px-3 py-1 rounded text-xs ${statusStyle}`}>
+                {b.status}
+              </span>
+
+            </td>
+
+
+            <td className="py-4 px-6 text-center font-mono text-xs text-[#E6C97A]">
+              {b.paymentId || "-"}
+            </td>
+
+
+            <td className="py-4 px-6 text-center">
+
+              <button
+                onClick={() => deleteBooking(b._id)}
+                className="bg-red-500/10 border border-red-500/30 px-3 py-1 rounded text-red-400 hover:bg-red-500 hover:text-white transition"
+              >
+                Delete
+              </button>
+
+            </td>
+
+          </tr>
+
+        );
+
+      })}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+</div>
     </div>
 
   );

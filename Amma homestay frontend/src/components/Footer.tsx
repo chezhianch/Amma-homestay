@@ -1,5 +1,5 @@
 import { MapPin, Phone, Mail, Clock, Instagram, Facebook } from "lucide-react";
-
+import { motion } from "framer-motion";
 export default function Footer() {
   return (
     <>
@@ -155,90 +155,163 @@ export default function Footer() {
 
 
 
-{/* FULL WIDTH BLACK CONTACT SECTION */}
 <section
-  id="contact"
-  className="
-    relative
-    pt-2 pb-24
-    px-6
-    bg-gradient-to-b
-    from-[#f6f4ef]
-    via-[#f3f0e8]
-    to-[#f6f4ef]
-  "
->
-  {/* Ambient luxury glow */}
-  <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-[#C6A75E]/10 blur-[140px] rounded-full pointer-events-none" />
+        id="contact"
+        className="relative py-12 px-6 overflow-hidden bg-gradient-to-b from-[#f6f4ef] via-[#f2efe7] to-[#f6f4ef]"
+      >
 
-  <div className="relative max-w-7xl mx-auto">
+        {/* Ambient luxury lights (BEHIND content) */}
+        <div className="absolute top-32 left-1/3 w-[320px] h-[320px] bg-[#C6A75E]/8 blur-[140px] rounded-full -z-10 pointer-events-none"></div>
 
-    {/* Premium card */}
-    <div
-      className="
-        bg-black/95
-        backdrop-blur-xl
-        rounded-2xl
-        p-14 md:p-16
+        <div className="absolute bottom-20 right-1/3 w-[260px] h-[260px] bg-[#C6A75E]/6 blur-[120px] rounded-full -z-10 pointer-events-none"></div>
 
-        border border-[#E8DFC8]/40
 
-        shadow-[0_10px_40px_rgba(0,0,0,0.5)]
-      "
+        <div className="max-w-6xl mx-auto relative">
+
+          {/* Animated premium card */}
+          <motion.div
+            initial={{ opacity: 0, y: 60 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 1,
+              ease: [0.22, 1, 0.36, 1]
+            }}
+            viewport={{ once: true }}
+            className="relative z-10"
+          >
+
+            {/* subtle gold border */}
+            <div className="absolute -inset-[1px] rounded-2xl border border-[#C6A75E]/20 pointer-events-none"></div>
+
+
+            {/* Main card */}
+            <div className="relative bg-[#0a0a0a]/95 backdrop-blur-xl rounded-2xl p-14 md:p-16 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+
+              {/* Label */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                viewport={{ once: true }}
+                className="text-[#C6A75E] text-xs tracking-[0.5em] uppercase mb-4"
+              >
+                Contact
+              </motion.p>
+
+
+              {/* Heading */}
+              <motion.h3
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.9,
+                  delay: 0.2,
+                  ease: [0.22, 1, 0.36, 1]
+                }}
+                viewport={{ once: true }}
+                className="text-5xl font-semibold text-white tracking-tight"
+              >
+                Get in Touch
+              </motion.h3>
+
+
+              {/* Divider */}
+              <motion.div
+                initial={{ scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                transition={{ duration: 1, delay: 0.4 }}
+                viewport={{ once: true }}
+                className="origin-left w-24 h-[1px] bg-[#C6A75E]/70 mt-6 mb-14"
+              />
+
+
+              {/* Contact items */}
+              <div className="space-y-8">
+
+                <ContactItem
+                  icon={<MapPin size={18} />}
+                  text="Homestay, Kodaikanal"
+                  delay={0.5}
+                />
+
+                <ContactItem
+                  icon={<Phone size={18} />}
+                  text="+91 98765 00000"
+                  delay={0.6}
+                />
+
+                <ContactItem
+                  icon={<Mail size={18} />}
+                  text="hello@ammahomestay.com"
+                  delay={0.7}
+                />
+
+                <ContactItem
+                  icon={<Clock size={18} />}
+                  text="Check-in: 12 PM · Check-out: 12 AM"
+                  delay={0.8}
+                />
+
+              </div>
+
+            </div>
+
+          </motion.div>
+
+        </div>
+
+      </section>
+    </>
+  );
+}
+
+
+
+/* Individual premium contact item */
+function ContactItem({ icon, text, delay }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 25 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.6,
+        delay: delay,
+        ease: [0.22, 1, 0.36, 1]
+      }}
+      viewport={{ once: true }}
+      whileHover={{ x: 8 }}
+      className="flex items-center gap-5 cursor-pointer"
     >
 
-      {/* Label */}
-      <p className="text-[#E6C97A] font-body text-xs tracking-[0.45em] uppercase mb-4">
-        Contact
-      </p>
+      {/* Icon */}
+      <motion.div
+        whileHover={{
+          backgroundColor: "#C6A75E",
+          color: "#0a0a0a",
+          borderColor: "#C6A75E"
+        }}
+        transition={{ duration: 0.3 }}
+        className="
+          w-12 h-12
+          rounded-lg
+          border border-[#C6A75E]/30
+          flex items-center justify-center
+          text-[#C6A75E]
+        "
+      >
+        {icon}
+      </motion.div>
 
-      {/* Heading */}
-      <h3 className="font-display text-4xl md:text-5xl font-semibold text-white">
-        Get in Touch
-      </h3>
 
-      {/* Divider */}
-      <div className="w-20 h-[2px] bg-gradient-to-r from-[#E6C97A] via-[#C6A75E] to-transparent mt-6 mb-12"></div>
+      {/* Text */}
+      <motion.p
+        whileHover={{ x: 3 }}
+        transition={{ duration: 0.3 }}
+        className="text-white/80 text-lg"
+      >
+        {text}
+      </motion.p>
 
-      {/* Contact info */}
-      <div className="space-y-7 text-white/80 text-lg">
-
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-lg border border-[#C6A75E]/30 flex items-center justify-center text-[#C6A75E]">
-            <MapPin size={18} />
-          </div>
-          <p>Homestay, Kodaikanal</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-lg border border-[#C6A75E]/30 flex items-center justify-center text-[#C6A75E]">
-            <Phone size={18} />
-          </div>
-          <p>+91 98765 00000</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-lg border border-[#C6A75E]/30 flex items-center justify-center text-[#C6A75E]">
-            <Mail size={18} />
-          </div>
-          <p>hello@ammahomestay.com</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-lg border border-[#C6A75E]/30 flex items-center justify-center text-[#C6A75E]">
-            <Clock size={18} />
-          </div>
-          <p>Check-in: 12 PM · Check-out: 12 AM</p>
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-</section>
-
-</>
+    </motion.div>
   );
 }

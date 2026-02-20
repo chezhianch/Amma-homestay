@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Menu, X, User, LogOut } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
 const navLinks = [
@@ -7,36 +8,67 @@ const navLinks = [
   { label: "Rooms", href: "#rooms" },
   { label: "Amenities", href: "#amenities" },
   { label: "About", href: "#about" },
-  { label: "Contact", href: "#contact" },
 ];
 
 export default function Navbar() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isWhiteBg, setIsWhiteBg] = useState(false);
 
   const navigate = useNavigate();
 
+
+  // detect admin
   useEffect(() => {
+
     const token = localStorage.getItem("adminToken");
     setIsAdmin(!!token);
+
   }, []);
 
+
+  // detect background change
+  useEffect(() => {
+
+    const handleScroll = () => {
+
+      const heroHeight = window.innerHeight;
+
+      if (window.scrollY > heroHeight - 100) {
+        setIsWhiteBg(true);
+      } else {
+        setIsWhiteBg(false);
+      }
+
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => window.removeEventListener("scroll", handleScroll);
+
+  }, []);
+
+
+
   const scrollTo = (href: string) => {
+
     setMenuOpen(false);
+
     const el = document.querySelector(href);
+
     if (el) el.scrollIntoView({ behavior: "smooth" });
+
   };
+
 
   const handleAdminClick = () => {
 
-    if (isAdmin) {
-      navigate("/admin/dashboard");
-    } else {
-      navigate("/admin");
-    }
+    if (isAdmin) navigate("/admin/dashboard");
+    else navigate("/admin");
 
   };
+
 
   const handleLogout = () => {
 
@@ -46,188 +78,252 @@ export default function Navbar() {
 
   };
 
+
+  // dynamic nav text color
+  const navTextColor = isWhiteBg
+    ? "text-black"
+    : "text-white";
+
+
+
   return (
-    <header
+
+    <motion.header
+
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6 }}
+
       className="
         fixed top-0 left-0 right-0 z-50
-        bg-gradient-to-r from-[#0c0c0c]/95 via-[#111111]/95 to-[#0c0c0c]/95
+        bg-transparent
         backdrop-blur-md
-        border-b border-[#C6A75E]/20
-        shadow-[0_8px_30px_rgba(0,0,0,0.8)]
       "
     >
 
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
-        {/* Logo */}
-        <button
-          onClick={() => scrollTo("#home")}
-          className="flex flex-col leading-none text-left"
-        >
-          <span className="font-display font-bold text-4xl tracking-wide bg-gradient-to-r from-[#E6C97A] via-[#C6A75E] to-[#A8893E] bg-clip-text text-transparent">
-            Amma
-          </span>
+      {/* Animated bottom line */}
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 1 }}
+        className="
+          absolute bottom-0 left-0 right-0
+          h-[1px]
+          bg-gradient-to-r
+          from-transparent
+          via-[#E6C97A]
+          to-transparent
+          origin-left
+        "
+      />
 
-          <span className="text-[#E6C97A] font-body text-[12px] tracking-[0.25em] uppercase opacity-90">
-            Homestay
-          </span>
-        </button>
+
+      {/* NAVBAR CONTENT */}
+      <div className="w-full h-20 flex items-center">
 
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-10 absolute left-1/2 -translate-x-1/2">
+        {/* LOGO — moved inside */}
+        <div className="pl-[80px]">
 
-          {navLinks.map((link) => (
+          <button
+            onClick={() => scrollTo("#home")}
+            className="flex flex-col"
+          >
+
+            <span className="
+              font-display font-bold text-4xl
+              bg-gradient-to-r
+              from-[#E6C97A]
+              via-[#C6A75E]
+              to-[#A8893E]
+              bg-clip-text text-transparent
+            ">
+              Amma
+            </span>
+
+            <span className="
+              text-[#E6C97A]
+              text-xs
+              tracking-[0.25em]
+              uppercase
+            ">
+              HOMESTAY
+            </span>
+
+          </button>
+
+        </div>
+
+
+
+        {/* RIGHT SIDE */}
+        <div className="hidden md:flex items-center gap-8 ml-auto pr-[80px]">
+
+
+          {/* NAV LINKS */}
+          {navLinks.map(link => (
 
             <button
               key={link.label}
               onClick={() => scrollTo(link.href)}
-              className="
-                relative
-                text-white/70
-                font-body
-                text-sm
-                tracking-wide
-                transition-all duration-500
+
+              className={`
+                relative font-body text-lg
+                transition-all duration-300
+                ${navTextColor}
+
                 hover:text-[#E6C97A]
+
                 before:absolute
-                before:left-1/2
+                before:left-0
                 before:-bottom-1
                 before:h-[1.5px]
                 before:w-0
-                before:bg-gradient-to-r
-                before:from-transparent
-                before:via-[#E6C97A]
-                before:to-transparent
+                before:bg-[#E6C97A]
                 before:transition-all
-                before:duration-500
+
                 hover:before:w-full
-                hover:before:left-0
-                hover:-translate-y-[1px]
-              "
+              `}
             >
               {link.label}
             </button>
 
           ))}
 
-        </nav>
 
 
-        {/* Right side */}
-        <div className="hidden md:flex items-center gap-4 ml-auto">
-
-          {/* Admin icon */}
+          {/* ADMIN ICON */}
           <button
             onClick={handleAdminClick}
-            className="
-              text-white/70
-              hover:text-[#E6C97A]
-              transition-all duration-300
-              hover:scale-110
-            "
-            title="Admin"
+            className={`${navTextColor} hover:text-[#E6C97A]`}
           >
-            <User size={20} />
+            <User size={20}/>
           </button>
 
 
-          {/* Logout icon (only if admin logged in) */}
+
+          {/* LOGOUT */}
           {isAdmin && (
-            <button
-              onClick={handleLogout}
-              className="
-                text-white/70
-                hover:text-red-400
-                transition-all duration-300
-                hover:scale-110
-              "
-              title="Logout"
-            >
-              <LogOut size={20} />
+            <button onClick={handleLogout}>
+              <LogOut size={20} className="text-red-400"/>
             </button>
           )}
 
 
-          {/* Book now button */}
-          <button
+
+          {/* BOOK NOW */}
+          <motion.button
+
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+
             onClick={() => scrollTo("#rooms")}
+
             className="
-              relative
               px-7 py-2.5
               rounded-md
-              font-body text-sm tracking-[0.18em]
+              font-body text-sm
+              tracking-[0.18em]
+
               text-[#E6C97A]
-              border border-[#C6A75E]/30
+
+              border border-[#C6A75E]/40
+
               bg-[#0b0b0b]
-              transition-all duration-500 ease-out
-              hover:-translate-y-[3px]
-              hover:border-[#E6C97A]
-              hover:text-white
-              hover:shadow-[0_0_12px_rgba(230,201,122,0.35),
-                            0_0_30px_rgba(198,167,94,0.25),
-                            0_10px_40px_rgba(0,0,0,0.7)]
-              active:translate-y-[1px]
             "
           >
             Book Now
-          </button>
+          </motion.button>
+
+
+
+          {/* CONTACT */}
+          <motion.button
+
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+
+            onClick={() => scrollTo("#contact")}
+
+            className="
+              px-7 py-2.5
+              rounded-md
+              font-body text-sm
+              tracking-[0.18em]
+
+              bg-gradient-to-r
+              from-[#E6C97A]
+              via-[#C6A75E]
+              to-[#A8893E]
+
+              text-black
+
+              border border-[#C6A75E]/40
+            "
+          >
+            Contact
+          </motion.button>
+
 
         </div>
 
 
-        {/* Mobile hamburger */}
+
+        {/* MOBILE BUTTON */}
         <button
-          className="md:hidden text-white/80 hover:text-[#E6C97A]"
           onClick={() => setMenuOpen(!menuOpen)}
+          className={`md:hidden ml-auto pr-[40px] ${navTextColor}`}
         >
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          {menuOpen ? <X size={24}/> : <Menu size={24}/>}
         </button>
+
 
       </div>
 
 
-      {/* Mobile menu */}
-      {menuOpen && (
 
-        <div className="md:hidden bg-[#111111] border-t border-[#C6A75E]/20 px-6 pb-6 pt-4 flex flex-col gap-4">
+      {/* MOBILE MENU */}
+      <AnimatePresence>
 
-          {navLinks.map((link) => (
+        {menuOpen && (
 
-            <button
-              key={link.label}
-              onClick={() => scrollTo(link.href)}
-              className="text-white/80 text-left hover:text-[#E6C97A]"
-            >
-              {link.label}
-            </button>
+          <motion.div
 
-          ))}
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
 
-
-          {/* Admin mobile */}
-          <button
-            onClick={handleAdminClick}
-            className="text-white/80 text-left hover:text-[#E6C97A]"
+            className="
+              backdrop-blur-md
+              bg-black/80
+              px-6 py-4
+              flex flex-col gap-4
+            "
           >
-            Admin
-          </button>
+
+            {navLinks.map(link => (
+
+              <button
+                key={link.label}
+                onClick={() => scrollTo(link.href)}
+                className="text-white text-left"
+              >
+                {link.label}
+              </button>
+
+            ))}
+
+          </motion.div>
+
+        )}
+
+      </AnimatePresence>
 
 
-          {isAdmin && (
-            <button
-              onClick={handleLogout}
-              className="text-red-400 text-left"
-            >
-              Logout
-            </button>
-          )}
 
+    </motion.header>
 
-        </div>
-
-      )}
-
-    </header>
   );
+
 }

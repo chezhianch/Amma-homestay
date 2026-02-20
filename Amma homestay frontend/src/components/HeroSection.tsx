@@ -1,15 +1,28 @@
 import heroBg from "@/assets/hero-bg.jpg";
+import { motion } from "framer-motion";
+import CountUp from "react-countup";
+import { useInView } from "react-intersection-observer";
 
 export default function HeroSection() {
+
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.4
+  });
+
   return (
     <section
       id="home"
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
     >
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105"
+
+      {/* Cinematic slow zoom background */}
+      <motion.div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${heroBg})` }}
+        initial={{ scale: 1 }}
+        animate={{ scale: 1.12 }}
+        transition={{ duration: 20, ease: "easeOut" }}
       />
 
       {/* Dark overlay */}
@@ -18,112 +31,134 @@ export default function HeroSection() {
       {/* Luxury gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
 
+
       {/* Hero Content */}
-      <div className="relative z-10 text-center px-6 animate-[fadeIn_1.2s_ease-out]">
+      <div className="relative z-10 text-center px-6">
 
         {/* Welcome text */}
-        <p className="text-[#E6C97A] tracking-[0.45em] uppercase text-xs mb-6 font-body">
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="text-[#E6C97A] tracking-[0.45em] uppercase text-xs mb-6 font-body"
+        >
           Welcome To
-        </p>
+        </motion.p>
 
-        {/* Premium Heading */}
+
+        {/* Heading */}
         <h1 className="font-display leading-tight">
 
-          {/* Amma */}
-          <span className="block text-white text-5xl md:text-6xl font-semibold">
+          <motion.span
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.4 }}
+            className="block text-white text-5xl md:text-6xl font-semibold"
+          >
             Amma
-          </span>
+          </motion.span>
 
-          {/* Homestay */}
-          <span className="
-            block
-            text-6xl md:text-7xl
-            font-bold
-            bg-gradient-to-r
-            from-[#E6C97A]
-            via-[#C6A75E]
-            to-[#A8893E]
-            bg-clip-text
-            text-transparent
-            mt-2
-          ">
+
+          <motion.span
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.7 }}
+            className="
+              block
+              text-6xl md:text-7xl
+              font-bold
+              bg-gradient-to-r
+              from-[#E6C97A]
+              via-[#C6A75E]
+              to-[#A8893E]
+              bg-clip-text
+              text-transparent
+              mt-2
+            "
+          >
             Homestay
-          </span>
+          </motion.span>
 
         </h1>
 
+
         {/* Description */}
-        <p className="
-          text-white/80
-          text-lg md:text-xl
-          max-w-2xl
-          mx-auto
-          leading-relaxed
-          mt-6
-          font-body
-        ">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1 }}
+          className="
+            text-white/80
+            text-lg md:text-xl
+            max-w-2xl
+            mx-auto
+            leading-relaxed
+            mt-6
+            font-body
+          "
+        >
           Experience warmth, comfort, and heartfelt hospitality —
           just like home, only better.
-        </p>
+        </motion.p>
 
-        {/* Premium Stats */}
-        <div className="
-          flex
-          flex-wrap
-          justify-center
-          gap-5
-          mt-14
-        ">
 
-          {/* Stat 1 */}
-          <div className="
-            px-7 py-2.5
-            border border-[#E6C97A]/40
-            rounded-full
-            text-sm
-            text-[#E6C97A]
-            backdrop-blur-md
-            bg-white/5
-            hover:bg-white/10
-            transition-all duration-300
-          ">
-            ★ 4.9 Rating
-          </div>
 
-          {/* Stat 2 */}
-          <div className="
-            px-7 py-2.5
-            border border-[#E6C97A]/40
-            rounded-full
-            text-sm
-            text-[#E6C97A]
-            backdrop-blur-md
-            bg-white/5
-            hover:bg-white/10
-            transition-all duration-300
-          ">
-            500+ Guests
-          </div>
+        {/* Animated Stats */}
+        <div
+          ref={ref}
+          className="flex flex-wrap justify-center gap-5 mt-14"
+        >
 
-          {/* Stat 3 */}
-          <div className="
-            px-7 py-2.5
-            border border-[#E6C97A]/40
-            rounded-full
-            text-sm
-            text-[#E6C97A]
-            backdrop-blur-md
-            bg-white/5
-            hover:bg-white/10
-            transition-all duration-300
-          ">
-            Since 2018
-          </div>
+          <StatBox inView={inView} value={4.9} suffix=" Rating" prefix="★ " />
+          <StatBox inView={inView} value={500} suffix="+ Guests" />
+          <StatBox inView={inView} value={2018} suffix="" prefix="Since " />
 
         </div>
 
       </div>
 
     </section>
+  );
+}
+
+
+
+function StatBox({
+  value,
+  suffix = "",
+  prefix = "",
+  inView
+}: any) {
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.8 }}
+      className="
+        px-7 py-2.5
+        border border-[#E6C97A]/40
+        rounded-full
+        text-sm
+        text-[#E6C97A]
+        backdrop-blur-md
+        bg-white/5
+        hover:bg-white/10
+        transition-all duration-300
+      "
+    >
+      {prefix}
+
+      {inView && (
+        <CountUp
+          end={value}
+          duration={2.5}
+          decimals={value % 1 !== 0 ? 1 : 0}
+        />
+      )}
+
+      {suffix}
+
+    </motion.div>
   );
 }
